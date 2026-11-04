@@ -62,6 +62,7 @@ def main():
         r.raise_for_status()
         if not zipfile.is_zipfile(io.BytesIO(r.content)):
             raise RuntimeError("KAIS did not return a valid ZIP for "+name)
+        folder.mkdir(parents=True,exist_ok=True)
         with zipfile.ZipFile(io.BytesIO(r.content)) as z:
             for item in z.infolist():
                 dest=(folder/item.filename).resolve()

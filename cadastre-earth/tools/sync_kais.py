@@ -33,6 +33,8 @@ def main():
     while frontier:
         prefix,entries=frontier.pop(0)
         for entry in entries:
+            if prefix == "" and not re.search("бургас|burgas",str(entry.get("Name","")),re.I):
+                continue
             name=str(entry.get("Name",""))
             path=str(entry.get("Path") or (prefix+"/"+name).strip("/"))
             is_dir=entry.get("IsDirectory") or entry.get("HasDirectories") or not name.lower().endswith(".zip")
@@ -44,6 +46,11 @@ def main():
             if len(frontier)>200: raise RuntimeError("Directory traversal exceeded safety limit")
             try:
                 children=read(path)
+            except requests.HTTPError as exc:
+                if exc.response is not None and exc.response.status_code in (401,403,429):
+                    raise RuntimeError(f"KAIS denied access ({exc.response.status_code}); stopping immediately without further requests") from exc
+                print(f"Cannot list {path}: {exc}",file=sys.stderr)
+                continue
             except requests.RequestException as exc:
                 print(f"Cannot list {path}: {exc}",file=sys.stderr)
                 continue

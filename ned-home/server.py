@@ -1,4 +1,4 @@
-import os, json, time, urllib.request, urllib.parse
+import os, json, time, urllib.request, urllib.parse, hashlib, hmac
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 
@@ -10,6 +10,38 @@ APP_PASSWORD=os.getenv('APP_PASSWORD','')
 WEATHER_ENTITY=os.getenv('WEATHER_ENTITY','')
 ROOT=Path(__file__).resolve().parent
 CACHE={'time':0,'data':None}
+WEATHER_CACHE={'time':0,'data':None}
+SESSION_SECRET=hashlib.sha256((APP_PASSWORD+'|'+HA_TOKEN+'|ned-home-v1.3').encode()).digest()
+SESSION_LIFETIME=30*24*3600
+
+def session_token():
+    expiry=str(int(time.time())+SESSION_LIFETIME)
+    sig=hmac.new(SESSION_SECRET,expiry.encode(),hashlib.sha256).hexdigest()
+    return expiry+'.'+sig
+
+def valid_session(cookie):
+    try:
+        token=next((v.strip()[12:] for v in cookie.split(';') if v.strip().startswith('ned_session=')), '')
+        expiry,sig=token.split('.',1)
+        expected=hmac.new(SESSION_SECRET,expiry.encode(),hashlib.sha256).hexdigest()
+        return int(expiry)>time.time() and hmac.compare_digest(sig,expected)
+    except (ValueError,TypeError):
+        return False
+
+def get_weather():
+    if WEATHER_CACHE['data'] is not None and time.time()-WEATHER_CACHE['time']<1800:
+        return WEATHER_CACHE['data']
+    url='https://api.open-meteo.com/v1/forecast?'+urllib.parse.urlencode({'latitude':42.6977,'longitude':23.3219,'timezone':'Europe/Sofia','current':'temperature_2m,weather_code','daily':'weather_code,temperature_2m_max,temperature_2m_min','forecast_days':4})
+    try:
+        with urllib.request.urlopen(url,timeout=10) as response:
+            raw=json.load(response)
+        daily=raw['daily']
+        weather={'temperature':raw['current']['temperature_2m'],'code':raw['current']['weather_code'],'forecast':[{'date':daily['time'][i],'code':daily['weather_code'][i],'low':daily['temperature_2m_min'][i],'high':daily['temperature_2m_max'][i]} for i in range(1,min(4,len(daily['time'])))]}
+        WEATHER_CACHE.update(time=time.time(),data=weather)
+        return weather
+    except Exception:
+        return WEATHER_CACHE['data']
+
 
 def ha(path, method='GET', body=None):
     headers={'Authorization':'Bearer '+HA_TOKEN,'Accept':'application/json'}
@@ -30,13 +62,10 @@ def fetch():
         states=ha('/api/states')
         entities=[]
         climates=[]
-        weathers=[]
         for s in states:
             a=s.get('attributes') or {}
             eid=s.get('entity_id','')
             domain=eid.split('.')[0]
-            if domain=='weather':
-                weathers.append(s)
             if domain=='climate':
                 climates.append({'id':eid,'name':a.get('friendly_name',eid),'state':s.get('state'),'attributes':{'current_temperature':a.get('current_temperature'),'temperature':a.get('temperature')}})
             if domain not in ('sensor','binary_sensor'):
@@ -47,20 +76,7 @@ def fetch():
             if domain=='binary_sensor' and dc not in ('door','window','opening','moisture','gas','smoke','motion','safety','problem','connectivity','battery','lock','garage_door'):
                 continue
             entities.append({'id':eid,'name':a.get('friendly_name') or eid,'state':s.get('state'),'unit':a.get('unit_of_measurement',''),'kind':dc or domain,'updated':s.get('last_updated')})
-        chosen=next((w for w in weathers if w.get('entity_id')==WEATHER_ENTITY),None) if WEATHER_ENTITY else None
-        if not chosen:
-            chosen=next((w for w in weathers if any(k in (w.get('entity_id','')+' '+w.get('attributes',{}).get('friendly_name','')).lower() for k in ('sofia','софия'))),None)
-        weather=None
-        if chosen:
-            a=chosen.get('attributes') or {}
-            weather={'name':a.get('friendly_name','София'),'state':chosen.get('state'),'temperature':a.get('temperature'),'forecast':[]}
-            # Modern HA exposes forecasts through a service response, not necessarily state attributes.
-            try:
-                result=ha('/api/services/weather/get_forecasts?return_response',method='POST',body={'entity_id':chosen['entity_id'],'type':'daily'})
-                response=result.get('service_response',result) if isinstance(result,dict) else {}
-                weather['forecast']=(response.get(chosen['entity_id'],{}) or {}).get('forecast',[])
-            except Exception:
-                weather['forecast']=a.get('forecast') or []
+        weather=get_weather()
         result={'entities':entities,'climates':climates,'weather':weather,'fetched_at':int(time.time())}
         CACHE.update(time=time.time(),data=result)
         return result
@@ -101,14 +117,30 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Cache-Control','no-store')
         self.send_header('X-Content-Type-Options','nosniff')
         self.send_header('Content-Security-Policy',"default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'")
+        if getattr(self,'session_cookie',None):
+            self.send_header('Set-Cookie',self.session_cookie)
         self.send_header('Content-Length',str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+    def do_POST(self):
+        if urllib.parse.urlsplit(self.path).path!='/api/login':
+            return self.respond(404,{'error':'Not found'})
+        try:
+            length=int(self.headers.get('Content-Length','0'))
+            if length>2048 or length<1:
+                return self.respond(400,{'error':'Invalid request'})
+            data=json.loads(self.rfile.read(length))
+        except (ValueError,TypeError):
+            return self.respond(400,{'error':'Invalid request'})
+        if not APP_PASSWORD or not hmac.compare_digest(str(data.get('password','')),APP_PASSWORD):
+            return self.respond(401,{'error':'Invalid password'})
+        self.session_cookie='ned_session='+session_token()+'; Path=/; HttpOnly; SameSite=Strict; Max-Age='+str(SESSION_LIFETIME)
+        return self.respond(200,{'ok':True})
     def do_GET(self):
         parsed=urllib.parse.urlsplit(self.path)
         path=parsed.path
         if path.startswith('/api/'):
-            if APP_PASSWORD and self.headers.get('X-App-Password')!=APP_PASSWORD:
+            if APP_PASSWORD and not valid_session(self.headers.get('Cookie','')):
                 return self.respond(401,{'error':'Невалидна парола за панела'})
             if path=='/api/status':
                 return self.respond(200,fetch())

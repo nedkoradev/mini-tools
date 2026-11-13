@@ -31,12 +31,12 @@ def valid_session(cookie):
 def get_weather():
     if WEATHER_CACHE['data'] is not None and time.time()-WEATHER_CACHE['time']<1800:
         return WEATHER_CACHE['data']
-    url='https://api.open-meteo.com/v1/forecast?'+urllib.parse.urlencode({'latitude':42.6977,'longitude':23.3219,'timezone':'Europe/Sofia','current':'temperature_2m,weather_code','daily':'weather_code,temperature_2m_max,temperature_2m_min','forecast_days':4})
+    url='https://api.open-meteo.com/v1/forecast?'+urllib.parse.urlencode({'latitude':42.6977,'longitude':23.3219,'timezone':'Europe/Sofia','current':'temperature_2m,weather_code','daily':'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max','forecast_days':4})
     try:
         with urllib.request.urlopen(url,timeout=10) as response:
             raw=json.load(response)
         daily=raw['daily']
-        weather={'temperature':raw['current']['temperature_2m'],'code':raw['current']['weather_code'],'forecast':[{'date':daily['time'][i],'code':daily['weather_code'][i],'low':daily['temperature_2m_min'][i],'high':daily['temperature_2m_max'][i]} for i in range(1,min(4,len(daily['time'])))]}
+        weather={'temperature':raw['current']['temperature_2m'],'code':raw['current']['weather_code'],'forecast':[{'date':daily['time'][i],'code':daily['weather_code'][i],'low':daily['temperature_2m_min'][i],'high':daily['temperature_2m_max'][i],'rain':(daily.get('precipitation_probability_max') or [None]*len(daily['time']))[i]} for i in range(1,min(4,len(daily['time'])))]}
         WEATHER_CACHE.update(time=time.time(),data=weather)
         return weather
     except Exception:
@@ -154,6 +154,12 @@ class Handler(BaseHTTPRequestHandler):
             return self.respond(404,{'error':'Not found'})
         if path in ('/','/index.html'):
             return self.respond(200,(ROOT/'index.html').read_bytes(),'text/html; charset=utf-8')
+        if path=='/manifest.webmanifest':
+            return self.respond(200,(ROOT/'manifest.webmanifest').read_bytes(),'application/manifest+json; charset=utf-8')
+        if path=='/icon.svg':
+            return self.respond(200,(ROOT/'icon.svg').read_bytes(),'image/svg+xml')
+        if path=='/sw.js':
+            return self.respond(200,(ROOT/'sw.js').read_bytes(),'application/javascript; charset=utf-8')
         if path=='/app.js':
             return self.respond(200,(ROOT/'app.js').read_bytes(),'application/javascript; charset=utf-8')
         return self.respond(404,{'error':'Not found'})

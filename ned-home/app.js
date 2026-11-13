@@ -16,8 +16,6 @@ var defs=[
 ['Спалня','София',/^Дружба\s+спалня\s+3\s+(Temperature|Humidity|Battery)$/i],
 ['Външна','София',/^Дружба\s+външна\s+5\s+(Temperature|Humidity|Battery)$/i],
 ['Гараж','София',/^Дружба\s+гаража\s+6\s+(Temperature|Humidity|Battery)$/i],
-['Външна','Царево',/^външна\s+Царево\s+(Temperature|Humidity|Battery)$/i],
-['Спалня','Царево',/^спалня\s+Царево\s+(Temperature|Humidity|Battery)$/i],
 ['Хола','Царево',/^хола\s+Царево\s+(Temperature|Humidity|Battery)$/i]
 ];
 rooms=defs.map(function(d){var r={name:d[0],location:d[1],temperature:null,humidity:null,battery:null};entities.forEach(function(x){var n=(x.name||'').replace(/\s+/g,' ').trim();if(d[2].test(n)){var k=kind(x);if(k==='temperature'||k==='humidity'||k==='battery')r[k]=x}});return r})

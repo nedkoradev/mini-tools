@@ -29,7 +29,7 @@ done
 python3 -m py_compile "$TMP/server.py"
 # Optional JavaScript syntax check when node exists.
 if command -v node >/dev/null 2>&1; then node --check "$TMP/app.js"; fi
-grep -q 'NED HOME' "$TMP/index.html" || { echo "Missing dashboard title"; exit 1; }
+grep -qi 'NED Home' "$TMP/index.html" || { echo "Missing dashboard title"; exit 1; }
 echo "Approved SHA: $SHA"
 echo "Files downloaded and checked."
 if [ "$MODE" = --dry-run ]; then
@@ -55,6 +55,6 @@ if ! docker restart ned-home >/dev/null; then restore; exit 1; fi
 sleep 4
 if ! docker inspect -f '{{.State.Running}}' ned-home | grep -qx true; then restore; exit 1; fi
 # Check HTTP server, not HA integration. HA credentials remain in existing container.
-if ! curl -fsS --max-time 10 http://127.0.0.1:8765/ | grep -q 'NED HOME'; then restore; exit 1; fi
+if ! curl -fsS --max-time 10 http://127.0.0.1:8765/ | grep -qi 'NED Home'; then restore; exit 1; fi
 printf '%s\n' "$SHA" > "$STATE/installed.sha"
 echo "Installed $SHA successfully. Backup: $BACKUP"

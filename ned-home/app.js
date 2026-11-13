@@ -1,81 +1,23 @@
-(function () {
-  'use strict';
-  var password = '', last = [];
-  function el(id) { return document.getElementById(id); }
-  function safe(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
-  function clock() { var d = new Date(); el('clock').textContent = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); el('date').textContent = d.toLocaleDateString('bg-BG'); }
-  clock(); setInterval(clock, 15000);
-  function locationOf(x) { return /царево|tsarevo|tzarevo/i.test(x.name + ' ' + x.id) ? 'Царево' : 'София'; }
-  function kindOf(x) {
-    var k = (x.kind || '').toLowerCase(), name = (x.name || '').toLowerCase();
-    if (k === 'temperature' || x.unit === '°C' || /(?:temperature|температура)$/.test(name)) return 'temperature';
-    if (k === 'humidity' || (x.unit === '%' && !/battery|батерия/i.test(name)) || /(?:humidity|влажност)$/.test(name)) return 'humidity';
-    if (k === 'battery' || /(?:battery|батерия)$/.test(name)) return 'battery';
-    return 'other';
-  }
-  function roomName(x) {
-    var name = String(x.name || x.id || 'Сензор');
-    name = name.replace(/^(?:(?:дружба|софия|царево|druzhba|sofia|tsarevo|tzarevo)[\s\-–_:]+)+/i, '');
-    name = name.replace(/[\s\-–_:]*(?:temperature|humidity|battery|температура|влажност|батерия)\s*$/i, '');
-    name = name.replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '');
-    return name || 'Общ сензор';
-  }
-  function valid(x) { return x && x.state != null && x.state !== 'unknown' && x.state !== 'unavailable' && x.state !== ''; }
-  function metric(kind, item) {
-    var labels = {temperature:'Температура',humidity:'Влажност',battery:'Батерия'};
-    var val = '—', extra = '', low = false;
-    if (item && valid(item)) {
-      val = String(item.state) + (kind === 'temperature' ? ' °C' : ' %');
-      if (kind === 'battery') { var n = parseFloat(item.state); low = !isNaN(n) && n <= 30; }
-    }
-    return '<div class="metric"><div class="metric-label">' + labels[kind] + '</div><div class="metric-value ' + kind + (low ? ' low' : '') + (val === '—' ? ' missing' : '') + '">' + safe(val) + '</div></div>';
-  }
-  function render() {
-    var buckets = {'София':{},'Царево':{}}, html = '';
-    last.forEach(function (x) {
-      var loc = locationOf(x), room = roomName(x), key = room.toLocaleLowerCase('bg-BG'), group = buckets[loc], kind = kindOf(x);
-      if (!group[key]) group[key] = {name:room, temperature:null, humidity:null, battery:null, other:[]};
-      if (kind === 'other') group[key].other.push(x);
-      else if (!group[key][kind] || (!valid(group[key][kind]) && valid(x))) group[key][kind] = x;
-    });
-    ['София','Царево'].forEach(function (loc) {
-      var rooms = Object.keys(buckets[loc]).map(function (k) { return buckets[loc][k]; });
-      rooms.sort(function (a,b) { return a.name.localeCompare(b.name,'bg'); });
-      html += '<section><div class="section-head"><h2>' + loc + '</h2><span class="muted">' + rooms.length + ' помещения / устройства</span></div>';
-      if (!rooms.length) { html += '<div class="empty">Няма открити сензори.</div></section>'; return; }
-      html += '<div class="cards">';
-      rooms.forEach(function (r) {
-        var hasMain = !!(r.temperature || r.humidity || r.battery);
-        html += '<article class="card"><div class="card-title">' + safe(r.name) + '</div>';
-        if (hasMain) html += '<div class="metrics">' + metric('temperature',r.temperature) + metric('humidity',r.humidity) + metric('battery',r.battery) + '</div>';
-        r.other.forEach(function (x) {
-          var val = valid(x) ? x.state + (x.unit ? ' ' + x.unit : '') : 'Няма данни';
-          html += '<div class="card-note">' + safe(x.name) + ': <span class="other-reading">' + safe(val) + '</span></div>';
-        });
-        html += '</article>';
-      });
-      html += '</div></section>';
-    });
-    el('content').innerHTML = html;
-  }
-  function load() {
-    var xhr = new XMLHttpRequest(); xhr.open('GET','/api/status',true);
-    if (password) xhr.setRequestHeader('X-App-Password',password);
-    xhr.timeout = 18000;
-    xhr.onreadystatechange = function () {
-      if (xhr.readyState !== 4) return;
-      if (xhr.status === 401) { el('auth').style.display = 'flex'; el('status').textContent = 'Необходима е парола'; return; }
-      if (xhr.status !== 200) { el('status').textContent = 'Няма връзка'; el('message').innerHTML = '<div class="alert">Сървърът не отговаря. Проверете NAS и Home Assistant.</div>'; return; }
-      var data; try { data = JSON.parse(xhr.responseText); } catch (e) { el('status').textContent = 'Невалиден отговор'; return; }
-      if (data.error) { el('status').textContent = 'Грешка'; el('message').innerHTML = '<div class="alert">' + safe(data.error) + '</div>'; return; }
-      el('auth').style.display = 'none'; el('message').innerHTML = ''; last = data.entities || [];
-      el('status').textContent = '● Онлайн · ' + last.length + ' показания'; render();
-    };
-    xhr.ontimeout = function () { el('status').textContent = 'Изтекло време'; };
-    xhr.send();
-  }
-  el('refresh').onclick = load;
-  el('login').onclick = function () { password = el('password').value; load(); };
-  el('password').onkeydown = function (e) { if ((e || window.event).keyCode === 13) el('login').click(); };
-  load(); setInterval(load,30000);
+(function(){'use strict';
+var password='',entities=[],rooms=[],selected=null,period=24;
+function E(id){return document.getElementById(id)}function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','"':'&quot;',"'":'&#39;'}[c]})}
+function clock(){var d=new Date();E('clock').textContent=d.toLocaleTimeString('bg-BG',{hour:'2-digit',minute:'2-digit'});E('date').textContent=d.toLocaleDateString('bg-BG',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}clock();setInterval(clock,15000);
+function req(path,done){var x=new XMLHttpRequest();x.open('GET',path,true);if(password)x.setRequestHeader('X-App-Password',password);x.timeout=18000;x.onreadystatechange=function(){if(x.readyState===4){var data=null;try{data=JSON.parse(x.responseText)}catch(e){}done(x.status,data)}};x.ontimeout=function(){done(0,null)};x.send()}
+function loc(x){return /царево|tsarevo|tzarevo/i.test(x.name+' '+x.id)?'Царево':'София'}
+function kind(x){var k=(x.kind||'').toLowerCase(),n=x.name||'';if(k==='temperature'||x.unit==='°C'||/temperature|температура/i.test(n))return 'temperature';if(k==='humidity'||(/влажност|humidity/i.test(n)))return 'humidity';if(k==='battery'||/battery|батерия/i.test(n))return 'battery';return 'other'}
+function name(x){return (x.name||x.id||'Сензор').replace(/\s*(temperature|humidity|battery|температура|влажност|батерия)\s*$/i,'').replace(/^(дружба|софия|царево|druzhba|sofia|tsarevo|tzarevo)[\s:_-]*/i,'').replace(/[\s:_-]*(царево|tsarevo|tzarevo)\s*$/i,'').replace(/\s+/g,' ').trim()||'Сензор'}
+function ok(x){return x&&x.state!=null&&x.state!=='unknown'&&x.state!=='unavailable'&&x.state!==''}
+function age(x){if(!x||!x.updated)return '—';var n=Date.parse(x.updated);if(!isFinite(n))return '—';var min=Math.max(0,Math.floor((Date.now()-n)/60000));return min<60?min+' мин':min<1440?Math.floor(min/60)+' ч':Math.floor(min/1440)+' д'}
+function stale(r){var a=[r.temperature,r.humidity].filter(Boolean);return a.length===0||a.every(function(x){return !ok(x)})}
+function build(){var groups={};entities.forEach(function(x){if(x.id==='sensor.druzhba_spalnia_battery')return;var l=loc(x),n=name(x),key=l+'|'+n.toLowerCase(),k=kind(x);if(!groups[key])groups[key]={name:n,location:l,temperature:null,humidity:null,battery:null,other:[]};var r=groups[key];if(k==='other')r.other.push(x);else if(!r[k]||(!ok(r[k])&&ok(x)))r[k]=x});rooms=Object.keys(groups).map(function(k){return groups[k]});rooms.sort(function(a,b){return a.name.localeCompare(b.name,'bg')})}
+function val(x,k){return ok(x)?esc(x.state)+(k==='temperature'?'°C':'%'):'—'}
+function row(r,i,small){var isStale=stale(r),a=r.temperature||r.humidity,bat=r.battery;return '<button class="sensor'+(isStale?' stale':'')+'" data-room="'+i+'"><span class="name">'+esc(r.name)+(isStale?'<div class="warn">Недостъпен / без данни</div>':'')+'</span><span class="value temp">'+val(r.temperature,'temperature')+'</span><span class="value hum">'+val(r.humidity,'humidity')+'</span><span class="battery">▰ '+val(bat,'battery')+'</span><span class="age">'+(a?age(a):'—')+'</span></button>'}
+function render(){build();['София','Царево'].forEach(function(l){var rs=rooms.filter(function(r){return r.location===l}),html=rs.map(function(r){return row(r,rooms.indexOf(r),l==='Царево')}).join('');E(l==='София'?'sofia':'tsarevo').innerHTML=html||'<div class="empty">Няма налични сензори</div>'});document.querySelectorAll('[data-room]').forEach(function(b){b.onclick=function(){openRoom(rooms[Number(this.getAttribute('data-room'))])}})}
+function renderHeat(climates){var h=climates.map(function(x){var a=x.attributes||{},current=a.current_temperature,target=a.temperature;return '<div class="sensor" style="display:block;cursor:default"><strong>'+esc(x.name)+'</strong><div style="margin-top:8px"><span class="temp">'+esc(current==null?'—':current+'°C')+'</span> <span class="muted">Зададени '+esc(target==null?'—':target+'°C')+'</span></div></div>'}).join('');var radiatorBattery=entities.find(function(x){return x.id==='sensor.druzhba_spalnia_battery'});if(radiatorBattery)h+='<div class="sensor" style="display:block;cursor:default"><strong>Регулатор парно · Спалня</strong><div class="muted" style="margin-top:8px">Батерия: '+val(radiatorBattery,'battery')+'</div></div>';E('heating').innerHTML=h||'<div class="empty">Няма открити термовентили</div>'}
+function weather(d){var w=d&&d.weather;if(!w){E('weather-desc').textContent='Няма метеоданни от Home Assistant';E('forecast').innerHTML='<div class="muted">Прогнозата не е налична</div>';return}var icons={sunny:'☀',clear:'☀',cloudy:'☁',partlycloudy:'⛅',rainy:'🌧',pouring:'🌧',snowy:'❄',fog:'🌫',windy:'🌬'};E('weather-icon').textContent=icons[w.state]||'☁';E('weather-temp').textContent=w.temperature==null?'—':w.temperature+'°C';E('weather-desc').textContent=w.name||'София';E('forecast').innerHTML=(w.forecast||[]).slice(0,3).map(function(f){var dt=new Date(f.datetime);return '<div class="day">'+esc(isNaN(dt.getTime())?'Ден':dt.toLocaleDateString('bg-BG',{weekday:'short'}))+'<strong>'+esc(icons[f.condition]||'☁')+'</strong>'+esc(f.templow==null?'—':f.templow)+'° / '+esc(f.temperature==null?'—':f.temperature)+'°</div>'}).join('')||'<div class="muted">Няма 3-дневна прогноза</div>'}
+function load(){req('/api/status',function(status,data){if(status===401){E('auth').classList.remove('hide');E('status').textContent='Необходима е парола';return}if(status!==200||!data){E('status').textContent='Няма връзка';return}if(data.error){E('message').textContent=data.error;E('status').textContent='Грешка';return}E('auth').classList.add('hide');E('message').textContent='';entities=data.entities||[];E('status').textContent='● Онлайн · '+entities.length+' показания';render();renderHeat(data.climates||[]);weather(data)})}
+function openRoom(r){selected=r;period=24;E('dialog-title').textContent=r.name+' · '+r.location;E('details').innerHTML='<div class="stats"><div>Температура <span class="temp">'+val(r.temperature,'temperature')+'</span></div><div>Влажност <span class="hum">'+val(r.humidity,'humidity')+'</span></div><div>Батерия <span>'+val(r.battery,'battery')+'</span></div></div><div class="muted">Последно обновяване: '+age(r.temperature||r.humidity)+' (промяна в Home Assistant, не непременно физически отчет)</div>';E('overlay').classList.remove('hide');setPeriod(24)}
+function setPeriod(p){period=p;document.querySelectorAll('[data-period]').forEach(function(b){b.classList.toggle('selected',Number(b.getAttribute('data-period'))===p)});if(!selected)return;var ids=[selected.temperature,selected.humidity].filter(Boolean).map(function(x){return encodeURIComponent(x.id)});if(!ids.length){drawHistory({});return}req('/api/history?hours='+p+'&entities='+ids.join(','),function(status,data){drawHistory(status===200&&data?data:{})})}
+function drawHistory(data){['temperature','humidity'].forEach(function(k){var x=selected&&selected[k],samples=x&&data[x.id]||[];var points=samples.map(function(v){return {t:Date.parse(v.t),v:Number(v.v)}}).filter(function(v){return isFinite(v.t)&&isFinite(v.v)});var target=E(k==='temperature'?'chart-temp':'chart-hum');if(points.length<2){target.innerHTML='<div class="empty">Няма налична история за периода</div>';return}var min=Math.min.apply(null,points.map(function(v){return v.v})),max=Math.max.apply(null,points.map(function(v){return v.v})),lo=Math.min.apply(null,points.map(function(v){return v.t})),hi=Math.max.apply(null,points.map(function(v){return v.t})),span=Math.max(1,max-min),dur=Math.max(1,hi-lo);var poly=points.map(function(v){return (20+(v.t-lo)/dur*560).toFixed(1)+','+(130-(v.v-min)/span*105).toFixed(1)}).join(' ');target.innerHTML='<svg viewBox="0 0 600 150" role="img" aria-label="История"><line x1="20" y1="130" x2="580" y2="130" stroke="#555"/><polyline fill="none" stroke="'+(k==='temperature'?'#ffbe78':'#8ac8ff')+'" stroke-width="2.5" points="'+poly+'"/></svg><div class="muted">Мин '+min.toFixed(1)+' · Макс '+max.toFixed(1)+'</div>'})}
+E('refresh').onclick=load;E('login').onclick=function(){password=E('password').value;load()};E('password').onkeydown=function(e){if(e.key==='Enter')E('login').click()};E('close').onclick=function(){E('overlay').classList.add('hide')};E('overlay').onclick=function(e){if(e.target===E('overlay'))E('overlay').classList.add('hide')};document.addEventListener('keydown',function(e){if(e.key==='Escape')E('overlay').classList.add('hide')});document.querySelectorAll('[data-period]').forEach(function(b){b.onclick=function(){setPeriod(Number(this.getAttribute('data-period')))}});load();setInterval(load,30000);
 })();

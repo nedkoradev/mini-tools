@@ -1,0 +1,15 @@
+services:
+  ned-home:
+    image: python:3.12-alpine
+    container_name: ned-home
+    restart: unless-stopped
+    working_dir: /app
+    command: ["python", "server.py"]
+    ports:
+      - "8765:8765"
+    volumes:
+      - /volume1/Docker/ned-home:/app:ro
+    environment:
+      HA_URL: "http://192.168.1.114:8123"
+      HA_TOKEN: REDACTED
+      APP_PASSWORD: REDACTED

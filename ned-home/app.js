@@ -29,12 +29,22 @@ var a=x&&x.attributes||{},current=a.current_temperature,target=a.temperature;
 var battery=entities.find(function(e){return e.id==='sensor.druzhba_spalnia_battery'});
 E('heating').innerHTML='<div class="sensor heatrow"><strong>Регулатор парно · Спалня</strong><span class="temp">'+esc(current==null?'—':current+'°C')+'</span><span class="muted">Зададени '+esc(target==null?'—':target+'°C')+'</span><span class="battery">▰ '+val(battery,'battery')+'</span></div>'
 }
+function weatherSvg(code){
+code=Number(code);
+var sun='<circle cx="19" cy="19" r="8" fill="#ffcf52"/><g stroke="#ffcf52" stroke-width="3" stroke-linecap="round"><path d="M19 3v6M19 29v6M3 19h6M29 19h6M8 8l4 4M26 26l4 4M30 8l-4 4M12 26l-4 4"/></g>';
+var cloud='<path d="M13 34h25c7 0 11-5 11-11s-5-11-11-11c-2 0-4 0-5 1C29 5 17 5 12 14 4 14 1 20 1 25c0 5 5 9 12 9Z" fill="#d4e1ed" stroke="#8299af" stroke-width="2"/>';
+var rain='<g stroke="#58bbff" stroke-width="3" stroke-linecap="round"><path d="M15 39l-4 8M29 39l-4 8M42 39l-4 8"/></g>';
+var snow='<g fill="#a5e3ff" font-size="19"><text x="12" y="49">*</text><text x="33" y="49">*</text></g>';
+var thunder='<path d="M27 34l-8 13h9l-4 10 16-20H29l5-3" fill="#ffdb58"/>';
+var body=code===0?sun:code<=2?'<g transform="translate(0 -3)">'+sun+'</g><g transform="translate(12 10) scale(.75)">'+cloud+'</g>':code===3||code===45||code===48?cloud:code>=95?cloud+rain+thunder:code>=71&&code<=77?cloud+snow:cloud+rain;
+return '<svg viewBox="0 0 58 58" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'+body+'</svg>';
+}
 function weather(d){
 var w=d&&d.weather;
 if(!w){E('weather-desc').textContent='Прогнозата за София не е достъпна';E('forecast').innerHTML='<div class="muted">Няма метеоданни</div>';return}
 var icons={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',71:'🌨️',73:'❄️',75:'❄️',80:'🌦️',81:'🌧️',82:'🌧️',95:'⛈️',96:'⛈️',99:'⛈️'};
 function description(code){if(code===0)return 'Слънчево';if(code<=2)return 'Разкъсана облачност';if(code===3)return 'Облачно';if(code===45||code===48)return 'Мъгла';if(code>=51&&code<=55)return 'Ръмеж';if(code>=61&&code<=65)return 'Дъжд';if(code>=71&&code<=77)return 'Сняг';if(code>=80&&code<=82)return 'Превалявания';if(code>=95)return 'Гръмотевици';return 'Променливо'}
-E('weather-icon').textContent=icons[w.code]||'☁️';
+E('weather-icon').innerHTML=weatherSvg(w.code);
 E('weather-temp').textContent=w.temperature==null?'—':Math.round(w.temperature)+'°C';
 E('weather-desc').textContent='София · '+description(Number(w.code));
 E('forecast').innerHTML=(w.forecast||[]).slice(0,3).map(function(f){var dt=new Date(f.date+'T12:00:00');return '<div class="day"><div>'+esc(dt.toLocaleDateString('bg-BG',{weekday:'short'}))+'</div><div class="forecast-icon">'+esc(icons[f.code]||'☁️')+'</div><div class="forecast-desc">'+esc(description(Number(f.code)))+'</div><strong>'+esc(Math.round(f.low))+'° / '+esc(Math.round(f.high))+'°</strong><div class="rain">💧 '+(f.rain==null?'—':esc(Math.round(f.rain))+'%')+'</div></div>'}).join('')||'<div class="muted">Няма прогноза</div>'

@@ -1,0 +1,40 @@
+name: NED Home checks
+on:
+  push:
+    paths:
+      - 'ned-home/**'
+      - '.github/workflows/ned-home-check.yml'
+  pull_request:
+    paths:
+      - 'ned-home/**'
+      - '.github/workflows/ned-home-check.yml'
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Python syntax
+        run: python -m py_compile ned-home/server.py
+      - name: JavaScript syntax
+        run: node --check ned-home/app.js
+      - name: Local HTTP smoke test
+        run: |
+          cd ned-home
+          python server.py &
+          PID=$!
+          trap 'kill $PID' EXIT
+          sleep 2
+          curl -fsS http://127.0.0.1:8765/ > /tmp/ned-home-index.html
+          curl -fsS http://127.0.0.1:8765/app.js > /tmp/ned-home-app.js
+          grep -q 'NED HOME' /tmp/ned-home-index.html
+          python - <<'PY'
+          import json,urllib.request
+          d=json.load(urllib.request.urlopen('http://127.0.0.1:8765/api/status'))
+          assert 'entities' in d
+          PY

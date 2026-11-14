@@ -1,0 +1,12 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'eu.nediq.nedhomedisplay'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'eu.nediq.nedhomedisplay'
+        minSdk 19
+        targetSdk 28
+        versionCode 1
+        versionName '1.0'
+    }
+}

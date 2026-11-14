@@ -71,10 +71,6 @@ def fetch():
             if domain not in ('sensor','binary_sensor'):
                 continue
             dc=a.get('device_class','')
-            if domain=='sensor' and dc not in ('temperature','humidity','battery','moisture','gas') and a.get('unit_of_measurement') not in ('°C','%'):
-                continue
-            if domain=='binary_sensor' and dc not in ('door','window','opening','moisture','gas','smoke','motion','safety','problem','connectivity','battery','lock','garage_door'):
-                continue
             entities.append({'id':eid,'name':a.get('friendly_name') or eid,'state':s.get('state'),'unit':a.get('unit_of_measurement',''),'kind':dc or domain,'updated':s.get('last_updated')})
         weather=get_weather()
         result={'entities':entities,'climates':climates,'weather':weather,'fetched_at':int(time.time())}

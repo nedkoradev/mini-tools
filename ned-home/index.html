@@ -1,15 +1,15 @@
-<!doctype html><html lang="bg"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#000000"><meta name="application-name" content="NED Home"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="/icon.svg"><title>NED Home v2.3</title><style>
+<!doctype html><html lang="bg"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#000000"><meta name="application-name" content="NED Home"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="/icon.svg"><title>NED Home v2.4</title><style>
 :root{color-scheme:dark;--bg:#000;--panel:#101010;--line:#303030;--fg:#fff;--muted:#bdbdbd;--temp:#ffbe78;--hum:#8ac8ff;--good:#66d6a1;--warn:#f1c36d;--bad:#ff7777}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px Arial,Helvetica,sans-serif}button,input{font:inherit}button{cursor:pointer;background:#202020;color:white;border:1px solid #444;border-radius:9px;padding:9px 13px}button:hover{background:#303030}button:focus-visible,input:focus-visible,.sensor:focus-visible{outline:2px solid #8ac8ff}main{max-width:1200px;margin:auto;padding:16px}header,.section-head,.row,.topline{display:flex;align-items:center;justify-content:space-between;gap:12px}header{margin-bottom:12px}.brand{font-size:20px;font-weight:700}.muted{color:var(--muted);font-size:12px}.version{color:#999;font-size:12px}.panel{background:var(--panel);border:1px solid #242424;border-radius:13px;padding:15px}.hero{display:grid;grid-template-columns:1fr 1.5fr;gap:12px}.clock{font-size:clamp(38px,7vw,75px);font-weight:700;line-height:1.1}.date{color:var(--muted);margin-top:8px}.weather-now{display:flex;align-items:center;gap:12px}.weather-icon{font-size:36px}.weather-temp{font-size:34px;color:var(--temp);font-weight:bold}.forecast{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:10px}.day{background:#1b1b1b;border-radius:8px;text-align:center;padding:7px;font-size:12px}.day strong{display:block;font-size:15px;margin:5px 0}.section-head{margin:19px 0 8px}.section-head h2{margin:0;font-size:18px}.sensor{display:grid;grid-template-columns:minmax(105px,1fr) 105px 75px 75px 85px;align-items:center;gap:8px;background:var(--panel);border:1px solid #242424;border-radius:9px;padding:11px 13px;margin:6px 0;cursor:pointer;width:100%;text-align:left}.sensor:hover{border-color:#777}.sensor .name{font-weight:700;overflow-wrap:anywhere}.sensor .value{font-size:17px;font-weight:700}.temp{color:var(--temp)}.hum{color:var(--hum)}.battery,.age{font-size:12px;color:var(--muted)}.age{text-align:right}.stale{opacity:.62}.stale .warn{opacity:1;color:var(--warn);font-size:11px}.lower{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:15px}.lower .sensor{grid-template-columns:minmax(80px,1fr) 80px 55px;gap:5px}.lower .sensor .battery,.lower .sensor .age{display:none}.empty{color:var(--muted);padding:14px}.error{color:var(--bad)}.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.foot{font-size:11px;color:#999;margin:18px 0}.overlay{position:fixed;inset:0;background:#000c;display:flex;align-items:center;justify-content:center;padding:14px;z-index:10}.dialog{width:min(700px,100%);max-height:90vh;overflow:auto;background:#161616;border:1px solid #555;border-radius:16px;padding:18px}.dialog h2{margin:0}.stats{display:flex;gap:16px;flex-wrap:wrap;margin:15px 0}.stats span{font-weight:700}.chartbox{background:#101010;border:1px solid #333;border-radius:10px;padding:10px;margin-top:10px}.chartbox svg{width:100%;height:150px;display:block}.tabs{display:flex;gap:6px}.tabs button.selected{background:#555}.auth{margin:12px 0}.auth input{background:#222;color:white;border:1px solid #555;border-radius:8px;padding:10px}.heatrow{grid-template-columns:minmax(150px,1fr) 75px 100px 65px;cursor:default}.hide{display:none!important}
 @media(max-width:720px){main{padding:10px}.hero,.lower{grid-template-columns:1fr}.sensor{grid-template-columns:minmax(75px,1fr) 77px 48px 42px 49px;gap:4px;padding:10px 7px}.sensor .value{font-size:14px}.sensor .battery,.sensor .age{font-size:10px}.brand{font-size:18px}.heatrow{grid-template-columns:1fr 65px;gap:7px}.heatrow .battery{display:block!important}.lower .sensor{grid-template-columns:minmax(80px,1fr) 90px 55px}}
 
-/* v2.3 responsive dashboard */
+/* v2.4 responsive dashboard */
 .sensor{min-width:0}.sensor>*{min-width:0}.section-head .muted{white-space:normal;text-align:right}.heatrow{display:grid;grid-template-columns:minmax(160px,1fr) 80px 100px 70px;align-items:center;gap:10px}.heatrow .battery{display:block!important;white-space:nowrap}.heatrow .muted{white-space:nowrap}
 @media(max-width:720px) and (orientation:portrait){.section-head .muted{font-size:10px;max-width:58%}.sensor{grid-template-columns:minmax(75px,1fr) 75px 55px 43px 42px;gap:3px}.sensor .battery{font-size:10px}.heatrow{grid-template-columns:minmax(110px,1fr) 65px 78px 53px;gap:5px;padding:10px 8px}.heatrow strong{font-size:12px}.heatrow .temp{font-size:13px}.heatrow .muted,.heatrow .battery{font-size:10px}}
 @media(orientation:landscape) and (max-height:700px){main{max-width:1250px;padding:8px 12px}.hero{grid-template-columns:1fr 1.5fr;gap:9px}.lower{grid-template-columns:1fr 1fr;gap:9px;margin-top:9px}.panel{padding:10px}.clock{font-size:clamp(38px,6vw,60px)}.section-head{margin:10px 0 5px}.section-head h2{font-size:15px}.sensor{padding:7px 10px;margin:4px 0;grid-template-columns:minmax(80px,1fr) 78px 64px 55px 58px}.sensor .value{font-size:14px}.lower .sensor{grid-template-columns:minmax(75px,1fr) 66px 55px}.heatrow{grid-template-columns:minmax(120px,1fr) 58px 77px 48px!important}.heatrow .battery{display:block!important}.heatrow strong{font-size:12px}.heatrow .muted,.heatrow .battery{font-size:10px}.weather-temp{font-size:27px}.forecast{margin-top:5px}.day{padding:4px}.foot{margin:9px 0}}
 @media(min-width:721px) and (max-width:1100px){.heatrow{grid-template-columns:minmax(110px,1fr) 60px 85px 55px;gap:5px}.heatrow strong{font-size:12px}}
 .forecast-icon{font-size:29px;line-height:1.4;margin:5px 0}.forecast-desc{font-size:11px;color:#d6d6d6;min-height:26px}.rain{font-size:12px;color:#8ac8ff;margin-top:5px}.forecast .day{min-width:0}.forecast .day strong{font-size:15px}@media(max-width:400px){.forecast-desc{font-size:10px}.forecast-icon{font-size:24px}.forecast .day{padding:5px 2px}}
 
-/* v2.3: wall tablet and compact sensor cards */
+/* v2.4: wall tablet and compact sensor cards */
 #sofia{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
 #sofia .sensor{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;margin:0;min-height:105px;padding:12px}
 #sofia .sensor .name{font-size:15px}
@@ -56,7 +56,7 @@ header{margin-bottom:7px}
 .clock{font-size:clamp(52px,9vw,95px)}
 }
 
-/* v2.3 tablet: larger clock and weather, gently outlined room cards */
+/* v2.4 tablet: larger clock and weather, gently outlined room cards */
 @media (orientation:landscape) and (min-width:760px){
 .hero{grid-template-columns:1.06fr 1.5fr}
 .hero>.panel{min-height:250px;padding:16px 18px}
@@ -93,7 +93,7 @@ header{margin-bottom:7px}
 .lower{margin-top:13px}
 }
 
-/* v2.3: wall tablet visual hierarchy and bottom-aligned rooms */
+/* v2.4: wall tablet visual hierarchy and bottom-aligned rooms */
 @media (orientation:landscape) and (min-width:760px){
 main{min-height:100vh;display:flex;flex-direction:column;padding-bottom:12px}
 .hero{grid-template-columns:1.12fr 1.45fr}
@@ -130,7 +130,7 @@ main>section:has(#sofia){margin-top:auto}
 #sofia .sensor{min-height:104px}
 }
 
-/* v2.3: larger wall clock/forecast, stronger outlines, old-browser compatible bottom alignment */
+/* v2.4: larger wall clock/forecast, stronger outlines, old-browser compatible bottom alignment */
 @media (orientation:landscape) and (min-width:760px){
 .sofia-section{margin-top:auto}
 .hero{grid-template-columns:1.15fr 1.4fr}
@@ -160,7 +160,7 @@ main>section:has(#sofia){margin-top:auto}
 .forecast-desc{font-size:13px}
 }
 
-/* v2.3: distance-readable room measurements on 1280x800 wall tablet */
+/* v2.4: distance-readable room measurements on 1280x800 wall tablet */
 @media (orientation:landscape) and (min-width:760px){
 .clock{font-size:165px;font-size:clamp(155px,17vw,215px)}
 .weather-temp{font-size:76px;line-height:1.05}
@@ -203,7 +203,7 @@ main>section:has(#sofia){margin-top:auto}
 #tsarevo .sensor .value{font-size:27px}
 }
 
-/* v2.3: weather symbols 50% larger than v2.0 */
+/* v2.4: weather symbols 50% larger than v2.0 */
 @media (orientation:landscape) and (min-width:760px){
 .weather-icon svg{width:117px;height:117px}
 .forecast-icon{height:83px}
@@ -215,7 +215,7 @@ main>section:has(#sofia){margin-top:auto}
 .forecast-icon svg{width:66px;height:66px}
 }
 
-/* v2.3: another 50% weather icon growth and highly legible date */
+/* v2.4: another 50% weather icon growth and highly legible date */
 @media (orientation:landscape) and (min-width:760px){
 .weather-icon svg{width:176px;height:176px}
 .forecast-icon{height:125px}
@@ -229,7 +229,7 @@ main>section:has(#sofia){margin-top:auto}
 .date{font-size:26px}
 }
 
-/* v2.3: Android 4.4 WebView fallback without CSS grid */
+/* v2.4: Android 4.4 WebView fallback without CSS grid */
 @supports not (display:grid){
 body,html,main{background:#000!important;color:#fff!important}
 .hero{display:flex}.hero>.panel{width:45%;float:left}.hero>.panel+ .panel{width:55%}
@@ -239,4 +239,16 @@ body,html,main{background:#000!important;color:#fff!important}
 .forecast{display:flex}.forecast .day{width:33.333%}
 }
 body{background-color:#000!important;color:#fff!important}
-</style></head><body><main><header><div class="brand">⌂ NED HOME <span class="version">v2.3</span></div><div class="toolbar"><span id="status" class="muted">Свързване…</span><button id="refresh" type="button">↻</button></div></header><div class="hero"><section class="panel"><div id="clock" class="clock">--:--</div><div id="date" class="date"></div><div class="muted" style="margin-top:14px">София · България</div></section><section class="panel"><div class="weather-now"><div class="weather-icon" id="weather-icon">☁</div><div><div class="weather-temp" id="weather-temp">—</div><div class="muted" id="weather-desc">Очакване на прогноза</div></div></div><div id="forecast" class="forecast"></div></section></div><div id="auth" class="auth hide"><label>Парола: <input type="password" id="password"></label> <button id="login">Влез</button></div><div id="message"></div><section class="sofia-section"><div class="section-head"><h2>София</h2><span class="muted">Температура · Влажност · Батерия · Отчет</span></div><div id="sofia"></div></section><div class="lower"><section class="panel"><div class="section-head" style="margin-top:0"><h2>Царево</h2></div><div id="tsarevo"></div></section><section class="panel"><div class="section-head" style="margin-top:0"><h2>Отопление</h2></div><div id="heating"></div></section></div><div class="foot">Само наблюдение · Home Assistant · Данни на 30 сек</div></main><div id="overlay" class="overlay hide" role="presentation"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><div class="topline"><h2 id="dialog-title">Подробности</h2><button id="close" aria-label="Затвори">✕</button></div><div id="details"></div><div class="tabs" style="margin-top:14px"><button data-period="24" class="selected">24 часа</button><button data-period="48">48 часа</button><button data-period="168">7 дни</button></div><div class="chartbox"><strong class="temp">Температура</strong><div id="chart-temp"></div></div><div class="chartbox"><strong class="hum">Влажност</strong><div id="chart-hum"></div></div><div class="muted" id="history-note" style="margin-top:10px"></div></section></div><script src="/app.js"></script></body></html>
+/* v2.4: explicit legacy WebView flex layout; no @supports required */
+@media (orientation:landscape) and (min-width:760px){
+.hero{display:-webkit-box;display:-webkit-flex;display:flex}
+.hero>.panel{width:46%;-webkit-box-flex:1;-webkit-flex:1;flex:1;min-width:0}
+.hero>.panel+ .panel{width:54%;-webkit-box-flex:1.2;-webkit-flex:1.2;flex:1.2}
+#sofia{display:-webkit-box;display:-webkit-flex;display:flex}
+#sofia .sensor{width:20%;-webkit-box-flex:1;-webkit-flex:1;flex:1;min-width:0}
+.lower{display:-webkit-box;display:-webkit-flex;display:flex}
+.lower>.panel{width:50%;-webkit-box-flex:1;-webkit-flex:1;flex:1}
+.forecast{display:-webkit-box;display:-webkit-flex;display:flex}
+.forecast .day{width:33.33%;-webkit-box-flex:1;-webkit-flex:1;flex:1}
+}
+</style></head><body><main><header><div class="brand">⌂ NED HOME <span class="version">v2.4</span></div><div class="toolbar"><span id="status" class="muted">Свързване…</span><button id="refresh" type="button">↻</button></div></header><div class="hero"><section class="panel"><div id="clock" class="clock">--:--</div><div id="date" class="date"></div><div class="muted" style="margin-top:14px">София · България</div></section><section class="panel"><div class="weather-now"><div class="weather-icon" id="weather-icon">☁</div><div><div class="weather-temp" id="weather-temp">—</div><div class="muted" id="weather-desc">Очакване на прогноза</div></div></div><div id="forecast" class="forecast"></div></section></div><div id="auth" class="auth hide"><label>Парола: <input type="password" id="password"></label> <button id="login">Влез</button></div><div id="message"></div><section class="sofia-section"><div class="section-head"><h2>София</h2><span class="muted">Температура · Влажност · Батерия · Отчет</span></div><div id="sofia"></div></section><div class="lower"><section class="panel"><div class="section-head" style="margin-top:0"><h2>Царево</h2></div><div id="tsarevo"></div></section><section class="panel"><div class="section-head" style="margin-top:0"><h2>Отопление</h2></div><div id="heating"></div></section></div><div class="foot">Само наблюдение · Home Assistant · Данни на 30 сек</div></main><div id="overlay" class="overlay hide" role="presentation"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title"><div class="topline"><h2 id="dialog-title">Подробности</h2><button id="close" aria-label="Затвори">✕</button></div><div id="details"></div><div class="tabs" style="margin-top:14px"><button data-period="24" class="selected">24 часа</button><button data-period="48">48 часа</button><button data-period="168">7 дни</button></div><div class="chartbox"><strong class="temp">Температура</strong><div id="chart-temp"></div></div><div class="chartbox"><strong class="hum">Влажност</strong><div id="chart-hum"></div></div><div class="muted" id="history-note" style="margin-top:10px"></div></section></div><script src="/app.js"></script></body></html>

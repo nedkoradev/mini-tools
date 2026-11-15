@@ -1,6 +1,7 @@
-name: NED Home checks
+name: NED Home checks and release
 on:
   push:
+    branches: [main]
     paths:
       - 'ned-home/**'
       - '.github/workflows/ned-home-check.yml'
@@ -8,6 +9,11 @@ on:
     paths:
       - 'ned-home/**'
       - '.github/workflows/ned-home-check.yml'
+permissions:
+  contents: write
+concurrency:
+  group: ned-home-release-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   checks:
     runs-on: ubuntu-latest
@@ -23,6 +29,8 @@ jobs:
         run: python -m py_compile ned-home/server.py
       - name: JavaScript syntax
         run: node --check ned-home/app.js
+      - name: Browser initialization smoke test
+        run: node ned-home/tests/smoke.cjs
       - name: Local HTTP smoke test
         run: |
           cd ned-home
@@ -38,3 +46,33 @@ jobs:
           d=json.load(urllib.request.urlopen('http://127.0.0.1:8765/api/status'))
           assert 'entities' in d
           PY
+  release:
+    needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Publish only the successfully tested revision
+        env:
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          CURRENT_SHA="$(git rev-parse origin/main)"
+          if [ "$CURRENT_SHA" != "$TARGET_SHA" ]; then
+            echo "A newer main revision exists; skip stale release."
+            exit 0
+          fi
+          git checkout -B main origin/main
+          printf '%s\\n' "$TARGET_SHA" > ned-home/release.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ned-home/release.txt
+          if git diff --cached --quiet; then
+            echo "Already published."
+            exit 0
+          fi
+          git commit -m "Deploy NED Home verified ${TARGET_SHA:0:7}"
+          git push origin HEAD:main

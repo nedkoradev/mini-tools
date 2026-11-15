@@ -5,7 +5,23 @@ function pref(id){if(sensorPrefs.hasOwnProperty(id))return sensorPrefs[id];retur
 function savePrefs(){try{localStorage.setItem('ned-home-sensor-prefs',JSON.stringify(sensorPrefs))}catch(e){}}
 
 function E(id){return document.getElementById(id)}function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','"':'&quot;',"'":'&#39;'}[c]})}
-function clock(){var d=new Date(),h=d.getHours(),m=d.getMinutes();E('clock').textContent=(h<10?'0':'')+h+':'+(m<10?'0':'')+m;var days=['неделя','понеделник','вторник','сряда','четвъртък','петък','събота'],months=['януари','февруари','март','април','май','юни','юли','август','септември','октомври','ноември','декември'];E('date').innerHTML=days[d.getDay()]+'<span style="display:block">'+d.getDate()+' '+months[d.getMonth()]+'</span>'}clock();setInterval(clock,15000);
+function clock(){var d=new Date(),h=d.getHours(),m=d.getMinutes();E('clock').textContent=(h<10?'0':'')+h+':'+(m<10?'0':'')+m;var days=['неделя','понеделник','вторник','сряда','четвъртък','петък','събота'],months=['януари','февруари','март','април','май','юни','юли','август','септември','октомври','ноември','декември'];E('date').innerHTML=days[d.getDay()]+'<span style="display:block">'+d.getDate()+' '+months[d.getMonth()]+'</span>'}updateCalendar(d)}clock();setInterval(clock,15000);
+function updateCalendar(d){
+ var m=d.getMonth()+1,day=d.getDate(),key=m+'-'+day;
+ var holidays={'1-1':'Нова година','1-6':'Йордановден','1-7':'Ивановден','2-14':'Трифон Зарезан','3-1':'Баба Марта','3-3':'Национален празник','3-8':'Ден на жената','5-1':'Ден на труда','5-6':'Гергьовден','5-24':'24 май','6-1':'Ден на детето','9-6':'Съединението','9-22':'Независимостта','11-1':'Ден на будителите','12-6':'Никулден','12-24':'Бъдни вечер','12-25':'Коледа','12-26':'Коледа','12-31':'Нова година утре'};
+ // Orthodox Easter: Gregorian computus (Bulgarian Orthodox Church uses Julian paschalion).
+ function easter(y){var a=y%4,b=y%7,c=y%19,dd=(19*c+15)%30,e=(2*a+4*b-dd+34)%7;return new Date(y,2,22+dd+e+13)}
+ var eas=easter(d.getFullYear()),today=new Date(d.getFullYear(),d.getMonth(),day);
+ var delta=Math.round((today-eas)/86400000);
+ var moving={};moving[-2]='Разпети петък';moving[0]='Великден';moving[1]='Светли понеделник';moving[-7]='Цветница';moving[49]='Петдесетница';
+ E('holiday').textContent=holidays[key]||moving[delta]||'';
+ var age=((Date.UTC(d.getFullYear(),d.getMonth(),day,12)-Date.UTC(2000,0,6,18,14))/86400000)%29.530588853;
+ if(age<0)age+=29.530588853;
+ var phase=Math.floor((age/29.530588853*8)+0.5)%8;
+ var icons=['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'];
+ var names=['Новолуние','Растяща Луна','Първа четвърт','Растяща Луна','Пълнолуние','Намаляваща Луна','Последна четвърт','Намаляваща Луна'];
+ E('moon').textContent=icons[phase]+' '+names[phase];
+}
 function req(path,done){var x=new XMLHttpRequest();x.open('GET',path,true);x.timeout=18000;x.onreadystatechange=function(){if(x.readyState===4){var data=null;try{data=JSON.parse(x.responseText)}catch(e){}done(x.status,data)}};x.ontimeout=function(){done(0,null)};x.send()}
 function loc(x){return /царево|tsarevo|tzarevo/i.test(x.name+' '+x.id)?'Царево':'София'}
 function kind(x){var k=(x.kind||'').toLowerCase(),n=x.name||'';if(k==='temperature'||x.unit==='°C'||/temperature|температура/i.test(n))return 'temperature';if(k==='humidity'||(/влажност|humidity/i.test(n)))return 'humidity';if(k==='battery'||/battery|батерия/i.test(n))return 'battery';return 'other'}

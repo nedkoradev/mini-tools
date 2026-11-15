@@ -15,13 +15,33 @@ function updateCalendar(d){
  var delta=Math.round((today-eas)/86400000);
  var moving={};moving[-2]='Разпети петък';moving[0]='Великден';moving[1]='Светли понеделник';moving[-7]='Цветница';moving[49]='Петдесетница';
  E('holiday').textContent=holidays[key]||moving[delta]||'';
- var age=((Date.UTC(d.getFullYear(),d.getMonth(),day,12)-Date.UTC(2000,0,6,18,14))/86400000)%29.530588853;
- if(age<0)age+=29.530588853;
- var phase=Math.floor((age/29.530588853*8)+0.5)%8;
- var icons=['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'];
- var names=['Новолуние','Растяща Луна','Първа четвърт','Растяща Луна','Пълнолуние','Намаляваща Луна','Последна четвърт','Намаляваща Луна'];
- E('moon').textContent=icons[phase]+' '+names[phase];
+ var moon=moonInfo(d),illumination=Math.round(moon.illumination*100);
+ E('moon').innerHTML=moonSvg(moon);
+ E('moon').setAttribute('aria-label',(moon.waxing?'Растяща':'Намаляваща')+' Луна · '+illumination+'% осветена');
+ E('moon').title=(moon.waxing?'Растяща':'Намаляваща')+' Луна · '+illumination+'% осветена';
 }
+/* Low-precision solar/lunar ecliptic longitudes; actual date/time, not fixed lunar age. */
+function moonInfo(date){
+ var rad=Math.PI/180, days=date.getTime()/86400000+2440587.5-2451545;
+ var sunM=(357.5291+0.98560028*days)*rad;
+ var sunLon=sunM+(1.9148*Math.sin(sunM)+0.0200*Math.sin(2*sunM)+0.0003*Math.sin(3*sunM))*rad+102.9372*rad+Math.PI;
+ var moonM=(134.963+13.064993*days)*rad;
+ var moonLon=(218.316+13.176396*days+6.289*Math.sin(moonM))*rad;
+ var elongation=((moonLon-sunLon)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);
+ return {illumination:(1-Math.cos(elongation))/2,waxing:elongation<Math.PI};
+}
+function moonSvg(moon){
+ var r=42, rx=Math.max(.05,Math.abs(1-2*moon.illumination)*r);
+ var outerSweep=moon.waxing?1:0, terminatorSweep=moon.waxing?(moon.illumination<=.5?0:1):(moon.illumination<=.5?1:0);
+ var lit='M50 8 A42 42 0 0 '+outerSweep+' 50 92 A'+rx.toFixed(2)+' 42 0 0 '+terminatorSweep+' 50 8 Z';
+ return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="presentation" aria-hidden="true" data-waxing="'+(moon.waxing?'1':'0')+'" data-illumination="'+(moon.illumination*100).toFixed(1)+'">'
+  +'<defs><linearGradient id="nedMoonLight" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f9fafb"/><stop offset="1" stop-color="#c8d7e7"/></linearGradient><clipPath id="nedMoonClip"><path d="'+lit+'"/></clipPath></defs>'
+  +'<circle cx="50" cy="50" r="42" fill="#111b29" stroke="#8194aa" stroke-width="1.1"/>'
+  +'<path d="'+lit+'" fill="url(#nedMoonLight)"/>'
+  +'<g clip-path="url(#nedMoonClip)" fill="#899bab" opacity=".32"><circle cx="71" cy="32" r="6"/><circle cx="78" cy="65" r="8"/><circle cx="60" cy="52" r="5"/><circle cx="35" cy="38" r="9"/><circle cx="34" cy="70" r="5"/></g>'
+  +'<circle cx="50" cy="50" r="42" fill="none" stroke="#dce8f5" stroke-opacity=".45" stroke-width="1.3"/></svg>';
+}
+
 function req(path,done){var x=new XMLHttpRequest();x.open('GET',path,true);x.timeout=18000;x.onreadystatechange=function(){if(x.readyState===4){var data=null;try{data=JSON.parse(x.responseText)}catch(e){}done(x.status,data)}};x.ontimeout=function(){done(0,null)};x.send()}
 function loc(x){return /царево|tsarevo|tzarevo/i.test(x.name+' '+x.id)?'Царево':'София'}
 function kind(x){var k=(x.kind||'').toLowerCase(),n=x.name||'';if(k==='temperature'||x.unit==='°C'||/temperature|температура/i.test(n))return 'temperature';if(k==='humidity'||(/влажност|humidity/i.test(n)))return 'humidity';if(k==='battery'||/battery|батерия/i.test(n))return 'battery';return 'other'}

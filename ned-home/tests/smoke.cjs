@@ -9,7 +9,8 @@ const html = fs.readFileSync(path.join(base, 'index.html'), 'utf8');
 for (const id of ['clock', 'date', 'holiday', 'moon', 'settings-btn', 'settings-overlay', 'settings-list', 'status', 'forecast']) {
   assert.ok(html.includes('id="' + id + '"'), 'Missing element ' + id);
 }
-assert.ok(html.includes('v2.16'), 'Wrong displayed version');
+assert.ok(html.includes('v2.17'), 'Wrong displayed version');
+assert.ok(html.includes('id="tablet-battery"'), 'Tablet battery indicator missing');
 // Fixed UTC instant: 16 November 2026, 00:06 in Sofia; observed waxing crescent ~35%.
 class FixedDate extends Date {
   constructor(...args) { if (args.length === 0) super('2026-11-15T22:06:00.000Z'); else super(...args); }

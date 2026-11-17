@@ -101,10 +101,80 @@ E('weather-temp').textContent=w.temperature==null?'—':Math.round(w.temperature
 E('weather-desc').textContent='София · '+description(Number(w.code));
 E('forecast').innerHTML=(w.forecast||[]).slice(0,3).map(function(f){var dt=new Date(f.date+'T12:00:00');return '<div class="day"><div class="forecast-weekday">'+esc(['нд','пн','вт','ср','чт','пт','сб'][dt.getDay()])+'</div><div class="forecast-icon">'+weatherSvg(f.code)+'</div><div class="forecast-desc">'+esc(description(Number(f.code)))+'</div><strong>'+esc(Math.round(f.low))+'° / '+esc(Math.round(f.high))+'°</strong><div class="rain">💧 '+(f.rain==null?'—':esc(Math.round(f.rain))+'%')+'</div></div>'}).join('')||'<div class="muted">Няма прогноза</div>'
 }
-function load(){req('/api/status',function(status,data){if(status===401){E('auth').classList.remove('hide');E('status').textContent='Необходима е парола';return}if(status!==200||!data){E('status').textContent='Няма връзка';return}if(data.error){E('message').textContent=data.error;E('status').textContent='Грешка';return}E('auth').classList.add('hide');E('message').textContent='';entities=data.entities||[];climateItems=(data.climates||[]).map(function(c){return {id:c.id,name:c.name,state:c.state,unit:'',kind:'climate'}});render();if(!E('settings-overlay').classList.contains('hide'))settings();E('status').textContent='● Онлайн · '+rooms.filter(function(r){return r.temperature||r.humidity}).length+' помещения';renderHeat(data.climates||[]);weather(data)})}
+
+/* v2.17: read the tablet's own battery, not the batteries of room sensors.
+   On HTTP, Chromium may block Battery Status API; in that case display —%
+   unless HA reports exactly one identifiable tablet battery sensor. */
+var tabletBatteryNative=null, tabletBatteryObject=null;
+function tabletBatteryShow(level,charging,source){
+  var label=E('tablet-battery');if(!label)return;
+  if(level===null||level===''||!isFinite(Number(level))||Number(level)<0||Number(level)>100)return;
+  var pct=Math.round(Number(level));
+  label.textContent='🔋 '+pct+'%'+(charging===true?' ⚡':'');
+  label.classList.toggle('charging',charging===true);
+  label.classList.toggle('low',pct<=20&&charging!==true);
+  label.title='Батерия на таблета: '+pct+'%'+
+     (charging===true?' · Захранването е включено':charging===false?' · Без външно захранване':'')+
+     (source?' · '+source:'');
+}
+function tabletBatteryFromHA(){
+  if(tabletBatteryNative)return;
+  var selected='';try{selected=localStorage.getItem('ned-home-tablet-battery-entity')||''}catch(e){}
+  var matches=[];
+  for(var i=0;i<entities.length;i++){
+    var item=entities[i];if(!item||!item.id)continue;
+    var full=(item.name||'')+' '+item.id;
+    var percent=item.unit==='%'||/_battery_level$/i.test(item.id);
+    var battery=/battery|батерия/i.test(full);
+    var tablet=/tablet|таблет|galaxy[\s_-]*tab|samsung[\s_-]*tab|sm[\s_-]*t\d/i.test(full);
+    if(selected?item.id===selected:(percent&&battery&&tablet))matches.push(item);
+  }
+  if(matches.length!==1)return;
+  var x=matches[0];if(x.state==='unknown'||x.state==='unavailable'||x.state===null||x.state==='')return;
+  tabletBatteryShow(x.state,null,'Home Assistant');
+}
+function tabletBatteryInit(){
+  /* Native Fully Kiosk JS interface, when available. */
+  try{
+    if(typeof window!=='undefined'&&window.fully&&typeof window.fully.getBatteryLevel==='function'){
+      tabletBatteryNative=true;
+      var readFully=function(){
+        try{tabletBatteryShow(window.fully.getBatteryLevel(),
+          typeof window.fully.isPlugged==='function'?!!window.fully.isPlugged():null,'Таблет')}
+        catch(e){}
+      };
+      readFully();setInterval(readFully,60000);return;
+    }
+  }catch(e){}
+  /* Legacy Android browsers exposing BatteryManager directly. */
+  try{
+    var legacy=navigator.battery||navigator.webkitBattery||navigator.mozBattery;
+    if(legacy){tabletBatteryObject=legacy;tabletBatteryNative=true;tabletBatterySubscribe(legacy);return}
+  }catch(e){}
+  /* Recent Chrome: normally HTTPS-only. */
+  try{
+    if(typeof navigator.getBattery==='function'){
+      navigator.getBattery().then(function(battery){
+        if(!battery||typeof battery.level!=='number')return;
+        tabletBatteryObject=battery;tabletBatteryNative=true;tabletBatterySubscribe(battery);
+      },function(){tabletBatteryFromHA()});
+    }
+  }catch(e){}
+}
+function tabletBatterySubscribe(battery){
+  function update(){tabletBatteryShow(battery.level*100,battery.charging,'Браузър')}
+  update();
+  if(typeof battery.addEventListener==='function'){
+    battery.addEventListener('levelchange',update);
+    battery.addEventListener('chargingchange',update);
+  }
+  setInterval(update,60000);
+}
+
+function load(){req('/api/status',function(status,data){if(status===401){E('auth').classList.remove('hide');E('status').textContent='Необходима е парола';return}if(status!==200||!data){E('status').textContent='Няма връзка';return}if(data.error){E('message').textContent=data.error;E('status').textContent='Грешка';return}E('auth').classList.add('hide');E('message').textContent='';entities=data.entities||[];tabletBatteryFromHA();climateItems=(data.climates||[]).map(function(c){return {id:c.id,name:c.name,state:c.state,unit:'',kind:'climate'}});render();if(!E('settings-overlay').classList.contains('hide'))settings();E('status').textContent='● Онлайн · '+rooms.filter(function(r){return r.temperature||r.humidity}).length+' помещения';renderHeat(data.climates||[]);weather(data)})}
 function openRoom(r){selected=r;period=24;E('dialog-title').textContent=r.name+' · '+r.location;E('details').innerHTML='<div class="stats"><div>Температура <span class="temp">'+val(r.temperature,'temperature')+'</span></div><div>Влажност <span class="hum">'+val(r.humidity,'humidity')+'</span></div><div>Батерия <span>'+val(r.battery,'battery')+'</span></div></div><div class="muted">Последно обновяване: '+age(r.temperature||r.humidity)+' (промяна в Home Assistant, не непременно физически отчет)</div>';E('overlay').classList.remove('hide');setPeriod(24)}
 function setPeriod(p){period=p;Array.prototype.forEach.call(document.querySelectorAll('[data-period]'),function(b){b.classList.toggle('selected',Number(b.getAttribute('data-period'))===p)});if(!selected)return;var ids=[selected.temperature,selected.humidity].filter(Boolean).map(function(x){return encodeURIComponent(x.id)});if(!ids.length){drawHistory({});return}req('/api/history?hours='+p+'&entities='+ids.join(','),function(status,data){drawHistory(status===200&&data?data:{})})}
 function drawHistory(data){['temperature','humidity'].forEach(function(k){var x=selected&&selected[k],samples=x&&data[x.id]||[];var points=samples.map(function(v){return {t:Date.parse(v.t),v:Number(v.v)}}).filter(function(v){return isFinite(v.t)&&isFinite(v.v)});var target=E(k==='temperature'?'chart-temp':'chart-hum');if(points.length<2){target.innerHTML='<div class="empty">Няма налична история за периода</div>';return}var min=Math.min.apply(null,points.map(function(v){return v.v})),max=Math.max.apply(null,points.map(function(v){return v.v})),lo=Math.min.apply(null,points.map(function(v){return v.t})),hi=Math.max.apply(null,points.map(function(v){return v.t})),span=Math.max(1,max-min),dur=Math.max(1,hi-lo);var poly=points.map(function(v){return (20+(v.t-lo)/dur*560).toFixed(1)+','+(130-(v.v-min)/span*105).toFixed(1)}).join(' ');target.innerHTML='<svg viewBox="0 0 600 150" role="img" aria-label="История"><line x1="20" y1="130" x2="580" y2="130" stroke="#555"/><polyline fill="none" stroke="'+(k==='temperature'?'#ffbe78':'#8ac8ff')+'" stroke-width="2.5" points="'+poly+'"/></svg><div class="muted">Мин '+min.toFixed(1)+' · Макс '+max.toFixed(1)+'</div>'})}
-E('settings-btn').onclick=function(){settings();E('settings-overlay').classList.remove('hide')};E('settings-close').onclick=function(){E('settings-overlay').classList.add('hide')};E('settings-overlay').onclick=function(e){if(e.target===this)this.classList.add('hide')};E('refresh').onclick=load;E('login').onclick=function(){var x=new XMLHttpRequest();x.open('POST','/api/login',true);x.setRequestHeader('Content-Type','application/json');x.onload=function(){if(x.status===200){E('password').value='';load()}else{E('status').textContent='Грешна парола'}};x.send(JSON.stringify({password:E('password').value}))};E('password').onkeydown=function(e){if(e.key==='Enter')E('login').click()};E('close').onclick=function(){E('overlay').classList.add('hide')};E('overlay').onclick=function(e){if(e.target===E('overlay'))E('overlay').classList.add('hide')};document.addEventListener('keydown',function(e){if(e.key==='Escape')E('overlay').classList.add('hide')});Array.prototype.forEach.call(document.querySelectorAll('[data-period]'),function(b){b.onclick=function(){setPeriod(Number(this.getAttribute('data-period')))}});load();setInterval(load,30000);
+E('settings-btn').onclick=function(){settings();E('settings-overlay').classList.remove('hide')};E('settings-close').onclick=function(){E('settings-overlay').classList.add('hide')};E('settings-overlay').onclick=function(e){if(e.target===this)this.classList.add('hide')};E('refresh').onclick=load;E('login').onclick=function(){var x=new XMLHttpRequest();x.open('POST','/api/login',true);x.setRequestHeader('Content-Type','application/json');x.onload=function(){if(x.status===200){E('password').value='';load()}else{E('status').textContent='Грешна парола'}};x.send(JSON.stringify({password:E('password').value}))};E('password').onkeydown=function(e){if(e.key==='Enter')E('login').click()};E('close').onclick=function(){E('overlay').classList.add('hide')};E('overlay').onclick=function(e){if(e.target===E('overlay'))E('overlay').classList.add('hide')};document.addEventListener('keydown',function(e){if(e.key==='Escape')E('overlay').classList.add('hide')});Array.prototype.forEach.call(document.querySelectorAll('[data-period]'),function(b){b.onclick=function(){setPeriod(Number(this.getAttribute('data-period')))}});tabletBatteryInit();load();setInterval(load,30000);
 if('serviceWorker' in navigator){try{navigator.serviceWorker.register('/sw.js')}catch(e){}}
 })();

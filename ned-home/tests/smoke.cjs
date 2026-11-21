@@ -9,7 +9,7 @@ const html = fs.readFileSync(path.join(base, 'index.html'), 'utf8');
 for (const id of ['clock', 'date', 'holiday', 'moon', 'moon-phase-label', 'nameday', 'settings-btn', 'settings-overlay', 'settings-list', 'status', 'forecast']) {
   assert.ok(html.includes('id="' + id + '"'), 'Missing element ' + id);
 }
-assert.ok(html.includes('v2.18'), 'Wrong displayed version');
+assert.ok(html.includes('v2.19'), 'Wrong displayed version');
 assert.ok(html.includes('id="tablet-battery"'), 'Tablet battery indicator missing');
 // Fixed UTC instant: 16 November 2026, 00:06 in Sofia; observed waxing crescent ~35%.
 class FixedDate extends Date {
@@ -57,7 +57,8 @@ const fraction = Number((element('moon').innerHTML.match(/data-illumination="([\
 assert.ok(fraction >= 34 && fraction <= 38, 'Expected about 36% illumination on Nov 16, got '+fraction);
 assert.equal(element('moon').textContent, '', 'Moon should not have a text label in the layout');
 assert.equal(element('moon-phase-label').textContent, '', 'No event label on non-event dates');
-assert.match(element('nameday').textContent, /^Имен ден: /, 'Name-day line must render when date has celebrants');
+assert.ok(element('nameday').textContent.length > 0, 'Name-day line must show celebrants');
+assert.ok(!/Имен ден:/i.test(element('nameday').textContent), 'Hide the Имен ден prefix');
 assert.equal(element('weather-temp').textContent, '5°C', 'Weather did not render');
 assert.equal(typeof element('settings-btn').onclick, 'function', 'Settings button is inactive');
 element('settings-btn').onclick();

@@ -85,7 +85,7 @@ function updateCalendar(d){
  if(names.length){
   var subset=namedayExpanded?names:names.slice(0,7),remain=names.length-subset.length;
   nameLabel.classList.remove('hide');
-  nameLabel.textContent='Имен ден: '+subset.join(', ')+(remain?' · още '+remain:'')+(namedayExpanded?' ▲':'');
+  nameLabel.textContent=subset.join(', ')+(remain?' · още '+remain:'')+(namedayExpanded?' ▲':'');
   nameLabel.title='Именници: '+names.join(', ')+(remain?' · натисни за всички':'');
   nameLabel.onclick=function(){namedayExpanded=!namedayExpanded;updateCalendar(new Date())};
  }else{nameLabel.textContent='';nameLabel.classList.add('hide');nameLabel.onclick=null}

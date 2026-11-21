@@ -57,7 +57,7 @@ const fraction = Number((element('moon').innerHTML.match(/data-illumination="([\
 assert.ok(fraction >= 34 && fraction <= 38, 'Expected about 36% illumination on Nov 16, got '+fraction);
 assert.equal(element('moon').textContent, '', 'Moon should not have a text label in the layout');
 assert.equal(element('moon-phase-label').textContent, '', 'No event label on non-event dates');
-assert.match(element('nameday').textContent, /Матей/, 'November 16 must show name day');
+assert.match(element('nameday').textContent, /^Имен ден: /, 'Name-day line must render when date has celebrants');
 assert.equal(element('weather-temp').textContent, '5°C', 'Weather did not render');
 assert.equal(typeof element('settings-btn').onclick, 'function', 'Settings button is inactive');
 element('settings-btn').onclick();

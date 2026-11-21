@@ -6,10 +6,10 @@ const assert = require('node:assert/strict');
 const base = path.resolve(__dirname, '..');
 const script = fs.readFileSync(path.join(base, 'app.js'), 'utf8');
 const html = fs.readFileSync(path.join(base, 'index.html'), 'utf8');
-for (const id of ['clock', 'date', 'holiday', 'moon', 'settings-btn', 'settings-overlay', 'settings-list', 'status', 'forecast']) {
+for (const id of ['clock', 'date', 'holiday', 'moon', 'moon-phase-label', 'nameday', 'settings-btn', 'settings-overlay', 'settings-list', 'status', 'forecast']) {
   assert.ok(html.includes('id="' + id + '"'), 'Missing element ' + id);
 }
-assert.ok(html.includes('v2.17'), 'Wrong displayed version');
+assert.ok(html.includes('v2.18'), 'Wrong displayed version');
 assert.ok(html.includes('id="tablet-battery"'), 'Tablet battery indicator missing');
 // Fixed UTC instant: 16 November 2026, 00:06 in Sofia; observed waxing crescent ~35%.
 class FixedDate extends Date {
@@ -56,8 +56,26 @@ assert.match(element('moon').innerHTML, /data-waxing="1"/, 'Moon should be waxin
 const fraction = Number((element('moon').innerHTML.match(/data-illumination="([\d.]+)"/)||[])[1]);
 assert.ok(fraction >= 34 && fraction <= 38, 'Expected about 36% illumination on Nov 16, got '+fraction);
 assert.equal(element('moon').textContent, '', 'Moon should not have a text label in the layout');
+assert.equal(element('moon-phase-label').textContent, '', 'No event label on non-event dates');
+assert.match(element('nameday').textContent, /Матей/, 'November 16 must show name day');
 assert.equal(element('weather-temp').textContent, '5°C', 'Weather did not render');
 assert.equal(typeof element('settings-btn').onclick, 'function', 'Settings button is inactive');
 element('settings-btn').onclick();
 assert.equal(element('settings-overlay').classList.contains('hide'), false, 'Settings did not open');
-console.log('NED Home runtime smoke test passed');
+
+const calendarTestScript=script.replace(/\}\)\(\);\s*$/, 'globalThis.__calendar={moonEventForDay,namedayForDate};})();');
+const calendarSandbox={
+ document:{getElementById:element,querySelectorAll:()=>[],addEventListener:()=>{}},
+ localStorage:{getItem:()=>null,setItem:()=>{}},
+ XMLHttpRequest:XHR,navigator:{},setInterval:()=>{},Date:FixedDate,Math,Number,String,Array,Object,JSON,RegExp,isFinite,parseInt,encodeURIComponent
+};
+vm.runInNewContext(calendarTestScript,calendarSandbox,{filename:'calendar test',timeout:2000});
+const calendar=calendarSandbox.__calendar;
+assert.equal(calendar.moonEventForDay(new Date(2026,10,9,12)), 'Новолуние', 'USNO Nov 9 new moon');
+assert.equal(calendar.moonEventForDay(new Date(2026,10,24,12)), 'Пълнолуние', 'USNO Nov 24 full moon');
+assert.equal(calendar.moonEventForDay(new Date(2026,10,21,12)), '', 'Nov 21 no event');
+assert.ok(calendar.namedayForDate(new Date(2026,10,21,12),0).includes('Мария'), 'Nov 21 name day');
+assert.ok(calendar.namedayForDate(new Date(2026,10,24,12),0).includes('Екатерина'), 'Nov 24 name day');
+assert.ok(calendar.namedayForDate(new Date(2026,3,5,12),-7).includes('Цветан'), 'Цветница');
+
+console.log('NED Home runtime smoke test passed: lunar events + namedays');
